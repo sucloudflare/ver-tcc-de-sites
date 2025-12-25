@@ -1,0 +1,58 @@
+function Get-ServiceEvidence {
+    param($IP, $Port)
+
+    $evidence = [ordered]@{
+        Service  = $null
+        Proof    = @()
+        CWE      = @()
+        Severity = 'Info'
+    }
+
+    # HTTP / HTTPS
+    if ($Port -in 80,443) {
+        try {
+            $proto = if ($Port -eq 443) { 'https' } else { 'http' }
+            $resp  = Invoke-WebRequest "${proto}://${IP}" -Method Head -TimeoutSec 5 -UseBasicParsing
+
+            if ($resp.Headers['Server']) {
+                $evidence.Service = 'Web'
+                $evidence.Proof  += "Server header exposed: $($resp.Headers['Server'])"
+                $evidence.CWE    += 'CWE-200'
+                $evidence.Severity = 'Low'
+            }
+
+            if ($resp.Headers['X-Powered-By']) {
+                $evidence.Proof  += "X-Powered-By exposed: $($resp.Headers['X-Powered-By'])"
+                $evidence.CWE    += 'CWE-200'
+            }
+
+            if ($Port -eq 443 -and -not $resp.BaseResponse.ServicePoint.Certificate) {
+                $evidence.Proof  += 'TLS certificate missing'
+                $evidence.CWE    += 'CWE-319'
+                $evidence.Severity = 'Medium'
+            }
+        } catch {}
+    }
+
+    # SSH (passivo)
+    if ($Port -eq 22) {
+        try {
+            $client = New-Object System.Net.Sockets.TcpClient($IP,22)
+            $stream = $client.GetStream()
+            $buffer = New-Object byte[] 256
+            $read   = $stream.Read($buffer,0,256)
+            $banner = ([Text.Encoding]::ASCII).GetString($buffer,0,$read)
+
+            if ($banner -match '^SSH-') {
+                $evidence.Service = 'SSH'
+                $evidence.Proof  += "Banner exposed: $banner"
+                $evidence.CWE    += 'CWE-200'
+                $evidence.Severity = 'Low'
+            }
+            $client.Close()
+        } catch {}
+    }
+
+    if ($evidence.CWE.Count -eq 0) { return $null }
+    return [PSCustomObject]$evidence
+}

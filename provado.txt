@@ -1,0 +1,1 @@
+$result | Format-Table IP,Port,Service,Severity,CWE

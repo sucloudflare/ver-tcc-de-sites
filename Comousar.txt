@@ -1,0 +1,2 @@
+$result = Invoke-TcpEvidenceScan "example.com"
+$result | Format-List

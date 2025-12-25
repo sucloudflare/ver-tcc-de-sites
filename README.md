@@ -30,7 +30,7 @@
 
  <section>
  <h2>Uso</h2>
-  <pre><code>
+ <pre><code>
 # Importar funções (Test-TcpPort, Get-ServiceEvidence, Invoke-TcpEvidenceScan)
 # Executar scanner em um domínio autorizado
 $result = Invoke-TcpEvidenceScan "meu-alvo.local"
@@ -40,8 +40,8 @@ $result | Format-List
 
 # Listar apenas serviços verificados
 $result | Format-Table IP,Port,Service,Severity,CWE
-        </code></pre>
- </section>
+</code></pre>
+</section>
 
  <section>
    <h2>Funções Principais</h2>

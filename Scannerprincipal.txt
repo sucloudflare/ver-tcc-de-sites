@@ -1,0 +1,34 @@
+function Invoke-TcpEvidenceScan {
+    param(
+        [string]$Target,
+        [int[]]$Ports = @(22,80,443,21,25,3306,5432)
+    )
+
+    $host = $Target -replace 'https?://',''
+    $ips  = ([System.Net.Dns]::GetHostEntry($host)).AddressList |
+            ForEach-Object { $_.ToString() } | Sort-Object -Unique
+
+    $results = @()
+
+    foreach ($ip in $ips) {
+        foreach ($port in $Ports) {
+
+            if (Test-TcpPort $ip $port) {
+                $evidence = Get-ServiceEvidence $ip $port
+
+                if ($evidence) {
+                    $results += [PSCustomObject]@{
+                        IP        = $ip
+                        Port      = $port
+                        Service   = $evidence.Service
+                        CWE       = ($evidence.CWE | Sort-Object -Unique)
+                        Severity  = $evidence.Severity
+                        Proof     = $evidence.Proof
+                        Verified  = $true
+                    }
+                }
+            }
+        }
+    }
+    return $results
+}
